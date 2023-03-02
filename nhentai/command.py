@@ -76,8 +76,7 @@ def main():
                                 timeout=options.timeout, delay=options.delay)
 
         for doujinshi_id in doujinshi_ids:
-            doujinshi_info = doujinshi_parser(doujinshi_id)
-            if doujinshi_info:
+            if doujinshi_info := doujinshi_parser(doujinshi_id):
                 doujinshi = Doujinshi(name_format=options.name_format, **doujinshi_info)
             else:
                 continue
@@ -104,15 +103,14 @@ def main():
         if options.main_viewer:
             generate_main_html(options.output_dir)
 
-        if not platform.system() == 'Windows':
+        if platform.system() != 'Windows':
             logger.log(16, '🍻 All done.')
         else:
             logger.log(16, 'All done.')
 
     else:
         for doujinshi_id in doujinshi_ids:
-            doujinshi_info = doujinshi_parser(doujinshi_id)
-            if doujinshi_info:
+            if doujinshi_info := doujinshi_parser(doujinshi_id):
                 doujinshi = Doujinshi(name_format=options.name_format, **doujinshi_info)
             else:
                 continue

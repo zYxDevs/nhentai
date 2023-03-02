@@ -100,9 +100,7 @@ class ColorizingStreamHandler(logging.StreamHandler):
                     h = ctypes.windll.kernel32.GetStdHandle(-10 - fd)
 
             while parts:
-                text = parts.pop(0)
-
-                if text:
+                if text := parts.pop(0):
                     if sys.version_info < (3, 0, 0):
                         write(text.encode('utf-8'))
                     else:
@@ -124,9 +122,6 @@ class ColorizingStreamHandler(logging.StreamHandler):
                                 color |= 0x08 # foreground intensity on
                             elif p == 0: # reset to default color
                                 color = 0x07
-                            else:
-                                pass # error condition ignored
-
                         ctypes.windll.kernel32.SetConsoleTextAttribute(h, color)
 
     def colorize(self, message, record):
@@ -145,7 +140,7 @@ class ColorizingStreamHandler(logging.StreamHandler):
 
             if params and message:
                 if message.lstrip() != message:
-                    prefix = re.search(r"\s+", message).group(0)
+                    prefix = re.search(r"\s+", message)[0]
                     message = message[len(prefix):]
                 else:
                     prefix = ""

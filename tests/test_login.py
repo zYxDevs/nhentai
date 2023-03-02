@@ -16,11 +16,6 @@ class TestLogin(unittest.TestCase):
 
     def test_cookie(self):
         raise Exception(constant.CONFIG['cookie'])
-        try:
-            check_cookie()
-            self.assertTrue(True)
-        except Exception as e:
-            self.assertIsNone(e)
 
 
 if __name__ == '__main__':

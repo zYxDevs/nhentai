@@ -32,10 +32,7 @@ def download_callback(result):
         logger.warning(f'url {data} return status code 404')
     elif result == -2:
         logger.warning('Ctrl-C pressed, exiting sub processes ...')
-    elif result == -3:
-        # workers won't be run, just pass
-        pass
-    else:
+    elif result != -3:
         logger.log(16, f'{data} downloaded successfully')
 
 
@@ -51,7 +48,7 @@ class Downloader(Singleton):
         if self.delay:
             time.sleep(self.delay)
         logger.info(f'Starting to download {url} ...')
-        filename = filename if filename else os.path.basename(urlparse(url).path)
+        filename = filename or os.path.basename(urlparse(url).path)
         base_filename, extension = os.path.splitext(filename)
 
         save_file_path = os.path.join(folder, base_filename.zfill(3) + extension)
@@ -74,7 +71,7 @@ class Downloader(Singleton):
 
                     except Exception as e:
                         i += 1
-                        if not i < 10:
+                        if i >= 10:
                             logger.critical(str(e))
                             return 0, None
                         continue
@@ -89,13 +86,12 @@ class Downloader(Singleton):
                         f.write(chunk)
 
         except (requests.HTTPError, requests.Timeout) as e:
-            if retried < 3:
-                logger.warning(f'Warning: {e}, retrying({retried}) ...')
-                return 0, self.download(url=url, folder=folder, filename=filename,
-                                        retried=retried+1, proxy=proxy)
-            else:
+            if retried >= 3:
                 return 0, None
 
+            logger.warning(f'Warning: {e}, retrying({retried}) ...')
+            return 0, self.download(url=url, folder=folder, filename=filename,
+                                    retried=retried+1, proxy=proxy)
         except NHentaiImageNotExistException as e:
             os.remove(save_file_path)
             return -1, url
@@ -118,10 +114,9 @@ class Downloader(Singleton):
         if self.path:
             folder = os.path.join(self.path, folder)
 
-        if os.path.exists(folder + '.cbz'):
-            if not regenerate_cbz:
-                logger.warning(f'CBZ file "{folder}.cbz" exists, ignored download request')
-                return
+        if os.path.exists(f'{folder}.cbz') and not regenerate_cbz:
+            logger.warning(f'CBZ file "{folder}.cbz" exists, ignored download request')
+            return
 
         logger.info(f'Doujinshi will be saved at "{folder}"')
         if not os.path.exists(folder):

@@ -95,7 +95,6 @@ def merge_json():
 
 
 def serialize_unique(lst):
-    dictionary = {}
     parody = []
     character = []
     tag = []
@@ -103,21 +102,22 @@ def serialize_unique(lst):
     group = []
     for dic in lst:
         if 'parody' in dic:
-            parody.extend([i for i in dic['parody']])
+            parody.extend(list(dic['parody']))
         if 'character' in dic:
-            character.extend([i for i in dic['character']])
+            character.extend(list(dic['character']))
         if 'tag' in dic:
-            tag.extend([i for i in dic['tag']])
+            tag.extend(list(dic['tag']))
         if 'artist' in dic:
-            artist.extend([i for i in dic['artist']])
+            artist.extend(list(dic['artist']))
         if 'group' in dic:
-            group.extend([i for i in dic['group']])
-    dictionary['parody'] = list(set(parody))
-    dictionary['character'] = list(set(character))
-    dictionary['tag'] = list(set(tag))
-    dictionary['artist'] = list(set(artist))
-    dictionary['group'] = list(set(group))
-    return dictionary
+            group.extend(list(dic['group']))
+    return {
+        'parody': list(set(parody)),
+        'character': list(set(character)),
+        'tag': list(set(tag)),
+        'artist': list(set(artist)),
+        'group': list(set(group)),
+    }
 
 
 def set_js_database():
@@ -125,5 +125,5 @@ def set_js_database():
         indexed_json = merge_json()
         unique_json = json.dumps(serialize_unique(indexed_json), separators=(',', ':'))
         indexed_json = json.dumps(indexed_json, separators=(',', ':'))
-        f.write('var data = ' + indexed_json)
+        f.write(f'var data = {indexed_json}')
         f.write(';\nvar tags = ' + unique_json)

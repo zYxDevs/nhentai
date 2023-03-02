@@ -13,10 +13,12 @@ from nhentai.logger import logger
 
 def _get_csrf_token(content):
     html = BeautifulSoup(content, 'html.parser')
-    csrf_token_elem = html.find('input', attrs={'name': 'csrfmiddlewaretoken'})
-    if not csrf_token_elem:
+    if csrf_token_elem := html.find(
+        'input', attrs={'name': 'csrfmiddlewaretoken'}
+    ):
+        return csrf_token_elem.attrs['value']
+    else:
         raise Exception('Cannot find csrf token to login')
-    return csrf_token_elem.attrs['value']
 
 
 def login(username, password):
@@ -55,8 +57,8 @@ def _get_title_and_id(response):
     for doujinshi in doujinshi_search_result:
         doujinshi_container = doujinshi.find('div', attrs={'class': 'caption'})
         title = doujinshi_container.text.strip()
-        title = title if len(title) < 85 else title[:82] + '...'
-        id_ = re.search('/g/([0-9]+)/', doujinshi.a['href']).group(1)
+        title = title if len(title) < 85 else f'{title[:82]}...'
+        id_ = re.search('/g/([0-9]+)/', doujinshi.a['href'])[1]
         result.append({'id': id_, 'title': title})
 
     return result
@@ -74,7 +76,7 @@ def favorites_parser(page=None):
     if count == 0:
         logger.warning('No favorites found')
         return []
-    pages = int(count / 25)
+    pages = count // 25
 
     if page:
         page_range_list = page
@@ -109,8 +111,6 @@ def doujinshi_parser(id_, counter=0):
 
     id_ = int(id_)
     logger.info(f'Fetching doujinshi information of id {id_}')
-    doujinshi = dict()
-    doujinshi['id'] = id_
     url = f'{constant.DETAIL_URL}/{id_}/'
 
     try:
@@ -142,10 +142,12 @@ def doujinshi_parser(id_, counter=0):
     pretty_name = doujinshi_info.find('h1').find('span', attrs={'class': 'pretty'}).text
     subtitle = doujinshi_info.find('h2')
 
-    doujinshi['name'] = title
-    doujinshi['pretty_name'] = pretty_name
-    doujinshi['subtitle'] = subtitle.text if subtitle else ''
-
+    doujinshi = {
+        'id': id_,
+        'name': title,
+        'pretty_name': pretty_name,
+        'subtitle': subtitle.text if subtitle else '',
+    }
     doujinshi_cover = html.find('div', attrs={'id': 'cover'})
     img_id = re.search('/galleries/([0-9]+)/cover.(jpg|png|gif)$',
                        doujinshi_cover.a.img.attrs['data-src'])
@@ -159,7 +161,7 @@ def doujinshi_parser(id_, counter=0):
         logger.critical('Tried yo get image id failed')
         sys.exit(1)
 
-    doujinshi['img_id'] = img_id.group(1)
+    doujinshi['img_id'] = img_id[1]
     doujinshi['ext'] = ext
 
     pages = 0
@@ -190,27 +192,27 @@ def legacy_doujinshi_parser(id_):
 
     id_ = int(id_)
     logger.info(f'Fetching information of doujinshi id {id_}')
-    doujinshi = dict()
-    doujinshi['id'] = id_
     url = f'{constant.DETAIL_URL}/{id_}'
     i = 0
-    while 5 > i:
+    while i < 5:
         try:
             response = request('get', url).json()
         except Exception as e:
             i += 1
-            if not i < 5:
+            if i >= 5:
                 logger.critical(str(e))
                 sys.exit(1)
             continue
         break
 
-    doujinshi['name'] = response['title']['english']
-    doujinshi['subtitle'] = response['title']['japanese']
-    doujinshi['img_id'] = response['media_id']
-    doujinshi['ext'] = ''.join([i['t'] for i in response['images']['pages']])
-    doujinshi['pages'] = len(response['images']['pages'])
-
+    doujinshi = {
+        'id': id_,
+        'name': response['title']['english'],
+        'subtitle': response['title']['japanese'],
+        'img_id': response['media_id'],
+        'ext': ''.join([i['t'] for i in response['images']['pages']]),
+        'pages': len(response['images']['pages']),
+    }
     # gain information of the doujinshi
     needed_fields = ['character', 'artist', 'language', 'tag', 'parody', 'group', 'category']
     for tag in response['tags']:
@@ -284,9 +286,9 @@ def search_parser(keyword, sorting, page, is_page_all=False):
 
     total = f'/{page[-1]}' if is_page_all else ''
     not_exists_persist = False
-    for p in page:
-        i = 0
+    i = 0
 
+    for p in page:
         logger.info(f'Searching doujinshis using keywords "{keyword}" on page {p}{total}')
         while i < 3:
             try:
@@ -306,7 +308,7 @@ def search_parser(keyword, sorting, page, is_page_all=False):
 
         for row in response['result']:
             title = row['title']['english']
-            title = title[:85] + '..' if len(title) > 85 else title
+            title = f'{title[:85]}..' if len(title) > 85 else title
             result.append({'id': row['id'], 'title': title})
 
         not_exists_persist = False

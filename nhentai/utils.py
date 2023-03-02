@@ -36,24 +36,23 @@ def check_cookie():
         logger.error('Blocked by Cloudflare captcha, please set your cookie and useragent')
         sys.exit(1)
 
-    username = re.findall('"/users/[0-9]+/(.*?)"', response.text)
-    if not username:
-        logger.warning('Cannot get your username, please check your cookie or use `nhentai --cookie` to set your cookie')
-    else:
+    if username := re.findall('"/users/[0-9]+/(.*?)"', response.text):
         logger.log(16, f'Login successfully! Your username: {username[0]}')
+    else:
+        logger.warning('Cannot get your username, please check your cookie or use `nhentai --cookie` to set your cookie')
 
 
 class _Singleton(type):
     """ A metaclass that creates a Singleton base class when called. """
     _instances = {}
 
-    def __call__(cls, *args, **kwargs):
-        if cls not in cls._instances:
-            cls._instances[cls] = super(_Singleton, cls).__call__(*args, **kwargs)
-        return cls._instances[cls]
+    def __call__(self, *args, **kwargs):
+        if self not in self._instances:
+            self._instances[self] = super(_Singleton, self).__call__(*args, **kwargs)
+        return self._instances[self]
 
 
-class Singleton(_Singleton(str('SingletonMeta'), (object,), {})):
+class Singleton(_Singleton('SingletonMeta', (object,), {})):
     pass
 
 
@@ -83,7 +82,7 @@ def generate_html(output_dir='.', doujinshi_obj=None, template='default'):
     file_list.sort()
 
     for image in file_list:
-        if not os.path.splitext(image)[1] in ('.jpg', '.png'):
+        if os.path.splitext(image)[1] not in ('.jpg', '.png'):
             continue
         image_html += f'<img src="{image}" class="image-item"/>\n'
 
@@ -143,11 +142,7 @@ def generate_main_html(output_dir='./'):
             continue
 
         image = files[0]  # 001.jpg or 001.png
-        if folder is not None:
-            title = folder.replace('_', ' ')
-        else:
-            title = 'nHentai HTML Viewer'
-
+        title = 'nHentai HTML Viewer' if folder is None else folder.replace('_', ' ')
         image_html += element.format(FOLDER=folder, IMAGE=image, TITLE=title)
     if image_html == '':
         logger.warning('No index.html found, --gen-main paused.')
@@ -156,7 +151,7 @@ def generate_main_html(output_dir='./'):
         data = main.format(STYLES=css, SCRIPTS=js, PICTURE=image_html)
         with open('./main.html', 'wb') as f:
             f.write(data.encode('utf-8'))
-        shutil.copy(os.path.dirname(__file__) + '/viewer/logo.png', './')
+        shutil.copy(f'{os.path.dirname(__file__)}/viewer/logo.png', './')
         set_js_database()
         logger.log(16, f'Main Viewer has been written to "{output_dir}main.html"')
     except Exception as e:
@@ -243,7 +238,7 @@ def format_filename(s, length=MAX_FIELD_LENGTH, _truncate_only=False):
 
     # limit `length` chars
     if len(filename) >= length:
-        filename = filename[:length - 1] + u'…'
+        filename = f'{filename[:length - 1]}…'
 
     # Remove [] from filename
     filename = filename.replace('[]', '').strip()
@@ -264,14 +259,14 @@ def paging(page_string):
     for i in page_string.split(','):
         if '-' in i:
             start, end = i.split('-')
-            if not (start.isdigit() and end.isdigit()):
+            if not start.isdigit() or not end.isdigit():
                 raise Exception('Invalid page number')
             page_list.extend(list(range(int(start), int(end) + 1)))
-        else:
-            if not i.isdigit():
-                raise Exception('Invalid page number')
+        elif i.isdigit():
             page_list.append(int(i))
 
+        else:
+            raise Exception('Invalid page number')
     return page_list
 
 
@@ -285,22 +280,19 @@ def generate_metadata_file(output_dir, table, doujinshi_obj=None):
 
     logger.info(doujinshi_dir)
 
-    f = open(os.path.join(doujinshi_dir, 'info.txt'), 'w', encoding='utf-8')
+    with open(os.path.join(doujinshi_dir, 'info.txt'), 'w', encoding='utf-8') as f:
+        fields = ['TITLE', 'ORIGINAL TITLE', 'AUTHOR', 'ARTIST', 'GROUPS', 'CIRCLE', 'SCANLATOR',
+                  'TRANSLATOR', 'PUBLISHER', 'DESCRIPTION', 'STATUS', 'CHAPTERS', 'PAGES',
+                  'TAGS', 'TYPE', 'LANGUAGE', 'RELEASED', 'READING DIRECTION', 'CHARACTERS',
+                  'SERIES', 'PARODY', 'URL']
+        special_fields = ['PARODY', 'TITLE', 'ORIGINAL TITLE', 'CHARACTERS', 'AUTHOR', 'GROUPS',
+                          'LANGUAGE', 'TAGS', 'URL', 'PAGES']
 
-    fields = ['TITLE', 'ORIGINAL TITLE', 'AUTHOR', 'ARTIST', 'GROUPS', 'CIRCLE', 'SCANLATOR',
-              'TRANSLATOR', 'PUBLISHER', 'DESCRIPTION', 'STATUS', 'CHAPTERS', 'PAGES',
-              'TAGS', 'TYPE', 'LANGUAGE', 'RELEASED', 'READING DIRECTION', 'CHARACTERS',
-              'SERIES', 'PARODY', 'URL']
-    special_fields = ['PARODY', 'TITLE', 'ORIGINAL TITLE', 'CHARACTERS', 'AUTHOR', 'GROUPS',
-                      'LANGUAGE', 'TAGS', 'URL', 'PAGES']
-
-    for i in range(len(fields)):
-        f.write(f'{fields[i]}: ')
-        if fields[i] in special_fields:
-            f.write(str(table[special_fields.index(fields[i])][1]))
-        f.write('\n')
-
-    f.close()
+        for field in fields:
+            f.write(f'{field}: ')
+            if field in special_fields:
+                f.write(str(table[special_fields.index(field)][1]))
+            f.write('\n')
 
 
 class DB(object):

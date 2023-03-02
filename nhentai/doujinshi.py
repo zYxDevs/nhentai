@@ -21,7 +21,7 @@ class DoujinshiInfo(dict):
     def __getattr__(self, item):
         try:
             ret = dict.__getitem__(self, item)
-            return ret if ret else 'Unknown'
+            return ret or 'Unknown'
         except KeyError:
             return 'Unknown'
 
@@ -73,13 +73,13 @@ class Doujinshi(object):
     def download(self, regenerate_cbz=False):
         logger.info(f'Starting to download doujinshi: {self.name}')
         if self.downloader:
-            download_queue = []
             if len(self.ext) != self.pages:
                 logger.warning('Page count and ext count do not equal')
 
-            for i in range(1, min(self.pages, len(self.ext)) + 1):
-                download_queue.append(f'{IMAGE_URL}/{self.img_id}/{i}.{self.ext[i-1]}')
-
+            download_queue = [
+                f'{IMAGE_URL}/{self.img_id}/{i}.{self.ext[i - 1]}'
+                for i in range(1, min(self.pages, len(self.ext)) + 1)
+            ]
             self.downloader.start_download(download_queue, self.filename, regenerate_cbz=regenerate_cbz)
         else:
             logger.critical('Downloader has not been loaded')

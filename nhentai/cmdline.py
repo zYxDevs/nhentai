@@ -38,8 +38,6 @@ def write_config():
 
 
 def callback(option, opt_str, value, parser):
-    if option == '--id':
-        pass
     value = []
 
     for arg in parser.rargs:
@@ -172,10 +170,15 @@ def cmd_parser():
 
     if args.proxy is not None:
         proxy_url = urlparse(args.proxy)
-        if not args.proxy == '' and proxy_url.scheme not in ('http', 'https', 'socks5', 'socks5h',
-                                                             'socks4', 'socks4a'):
+        if args.proxy != '' and proxy_url.scheme not in (
+            'http',
+            'https',
+            'socks5',
+            'socks5h',
+            'socks4',
+            'socks4a',
+        ):
             logger.error(f'Invalid protocol "{proxy_url.scheme}" of proxy, ignored')
-            sys.exit(0)
         else:
             constant.CONFIG['proxy'] = {
                 'http': args.proxy,
@@ -183,8 +186,7 @@ def cmd_parser():
             }
             logger.info(f'Proxy now set to "{args.proxy}"')
             write_config()
-            sys.exit(0)
-
+        sys.exit(0)
     if args.viewer_template is not None:
         if not args.viewer_template:
             args.viewer_template = 'default'
@@ -199,15 +201,14 @@ def cmd_parser():
 
     # --- end set config ---
 
-    if args.favorites:
-        if not constant.CONFIG['cookie']:
-            logger.warning('Cookie has not been set, please use `nhentai --cookie \'COOKIE\'` to set it.')
-            sys.exit(1)
+    if args.favorites and not constant.CONFIG['cookie']:
+        logger.warning('Cookie has not been set, please use `nhentai --cookie \'COOKIE\'` to set it.')
+        sys.exit(1)
 
     if args.file:
         with open(args.file, 'r') as f:
             _ = [i.strip() for i in f.readlines()]
-            args.id = set(int(i) for i in _ if i.isdigit())
+            args.id = {int(i) for i in _ if i.isdigit()}
 
     if (args.is_download or args.is_show) and not args.id and not args.keyword and not args.favorites:
         logger.critical('Doujinshi id(s) are required for downloading')

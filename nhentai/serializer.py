@@ -61,6 +61,8 @@ def serialize_comic_xml(doujinshi, output_dir):
             xml_write_simple_tag(f, 'Day', dt.day)
         if doujinshi.info.parodies:
             xml_write_simple_tag(f, 'Series', doujinshi.info.parodies)
+        if doujinshi.info.groups:
+            xml_write_simple_tag(f, 'Groups', doujinshi.info.groups)
         if doujinshi.info.characters:
             xml_write_simple_tag(f, 'Characters', doujinshi.info.characters)
         if doujinshi.info.tags:
